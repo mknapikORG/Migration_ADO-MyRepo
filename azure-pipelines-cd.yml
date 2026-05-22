@@ -11,7 +11,7 @@ pool:
 
 variables:
   buildConfiguration: Release
-  azureServiceConnection: 'TODO-AZURE-SERVICE-CONNECTION'
+  azureServiceConnection: 'sd_migration_ado_my_repo'
   resourceGroupName: 'rg-migration-ado-sample'
   location: 'westeurope'
   appName: 'TODO-GLOBALLY-UNIQUE-APP-NAME'
