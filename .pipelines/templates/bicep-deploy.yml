@@ -1,0 +1,33 @@
+parameters:
+  azureServiceConnection: ''
+  resourceGroupName: ''
+  location: ''
+  templateFile: 'infra/main.bicep'
+  appName: ''
+  skuName: 'B1'
+
+steps:
+  - task: AzureCLI@2
+    displayName: 'Build Bicep template'
+    inputs:
+      azureSubscription: ${{ parameters.azureServiceConnection }}
+      scriptType: pscore
+      scriptLocation: inlineScript
+      inlineScript: |
+        az bicep build --file '${{ parameters.templateFile }}'
+
+  - task: AzureCLI@2
+    displayName: 'Deploy Azure infrastructure'
+    inputs:
+      azureSubscription: ${{ parameters.azureServiceConnection }}
+      scriptType: pscore
+      scriptLocation: inlineScript
+      inlineScript: |
+        az group create `
+          --name '${{ parameters.resourceGroupName }}' `
+          --location '${{ parameters.location }}'
+
+        az deployment group create `
+          --resource-group '${{ parameters.resourceGroupName }}' `
+          --template-file '${{ parameters.templateFile }}' `
+          --parameters appName='${{ parameters.appName }}' skuName='${{ parameters.skuName }}'

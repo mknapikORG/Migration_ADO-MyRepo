@@ -1,0 +1,23 @@
+parameters:
+  projectOrSolution: '**/*.sln'
+  buildConfiguration: Release
+
+steps:
+  - task: UseDotNet@2
+    displayName: 'Use .NET SDK'
+    inputs:
+      packageType: sdk
+      version: '10.x'
+
+  - task: DotNetCoreCLI@2
+    displayName: 'Restore'
+    inputs:
+      command: restore
+      projects: ${{ parameters.projectOrSolution }}
+
+  - task: DotNetCoreCLI@2
+    displayName: 'Build'
+    inputs:
+      command: build
+      projects: ${{ parameters.projectOrSolution }}
+      arguments: '--configuration ${{ parameters.buildConfiguration }} --no-restore'

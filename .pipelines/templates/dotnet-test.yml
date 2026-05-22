@@ -1,0 +1,12 @@
+parameters:
+  testProjects: 'tests/**/*.csproj'
+  buildConfiguration: Release
+
+steps:
+  - task: DotNetCoreCLI@2
+    displayName: 'Test'
+    inputs:
+      command: test
+      projects: ${{ parameters.testProjects }}
+      arguments: '--configuration ${{ parameters.buildConfiguration }} --no-build --logger trx --collect "XPlat Code Coverage"'
+      publishTestResults: true

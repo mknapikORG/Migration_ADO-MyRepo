@@ -1,0 +1,18 @@
+parameters:
+  project: 'src/HelloWorld.Api/HelloWorld.Api.csproj'
+  buildConfiguration: Release
+  artifactName: drop
+
+steps:
+  - task: DotNetCoreCLI@2
+    displayName: 'Publish app'
+    inputs:
+      command: publish
+      publishWebProjects: false
+      projects: ${{ parameters.project }}
+      arguments: '--configuration ${{ parameters.buildConfiguration }} --output $(Build.ArtifactStagingDirectory)/publish --no-build'
+      zipAfterPublish: true
+
+  - publish: '$(Build.ArtifactStagingDirectory)/publish'
+    displayName: 'Publish pipeline artifact'
+    artifact: ${{ parameters.artifactName }}

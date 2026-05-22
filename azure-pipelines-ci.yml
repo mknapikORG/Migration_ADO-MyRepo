@@ -1,0 +1,36 @@
+trigger:
+  branches:
+    include:
+      - main
+      - master
+      - feature/*
+      - codex/*
+
+pr:
+  branches:
+    include:
+      - main
+      - master
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  buildConfiguration: Release
+
+stages:
+  - stage: BuildAndTest
+    displayName: 'Build and test'
+    jobs:
+      - job: BuildAndTest
+        displayName: 'Build and test .NET app'
+        steps:
+          - template: .pipelines/templates/dotnet-build.yml
+            parameters:
+              projectOrSolution: MigrationAdoSample.slnx
+              buildConfiguration: $(buildConfiguration)
+
+          - template: .pipelines/templates/dotnet-test.yml
+            parameters:
+              testProjects: tests/**/*.csproj
+              buildConfiguration: $(buildConfiguration)

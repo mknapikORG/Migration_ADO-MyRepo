@@ -1,0 +1,80 @@
+trigger:
+  branches:
+    include:
+      - main
+      - master
+
+pr: none
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  buildConfiguration: Release
+  azureServiceConnection: 'TODO-AZURE-SERVICE-CONNECTION'
+  resourceGroupName: 'rg-migration-ado-sample'
+  location: 'westeurope'
+  appName: 'TODO-GLOBALLY-UNIQUE-APP-NAME'
+  skuName: 'B1'
+  artifactName: 'drop'
+
+stages:
+  - stage: Build
+    displayName: 'Build application'
+    jobs:
+      - job: Build
+        displayName: 'Build, test, and publish'
+        steps:
+          - template: .pipelines/templates/dotnet-build.yml
+            parameters:
+              projectOrSolution: MigrationAdoSample.slnx
+              buildConfiguration: $(buildConfiguration)
+
+          - template: .pipelines/templates/dotnet-test.yml
+            parameters:
+              testProjects: tests/**/*.csproj
+              buildConfiguration: $(buildConfiguration)
+
+          - template: .pipelines/templates/dotnet-publish.yml
+            parameters:
+              project: src/HelloWorld.Api/HelloWorld.Api.csproj
+              buildConfiguration: $(buildConfiguration)
+              artifactName: $(artifactName)
+
+  - stage: DeployInfrastructure
+    displayName: 'Deploy infrastructure'
+    dependsOn: Build
+    jobs:
+      - deployment: DeployInfrastructure
+        displayName: 'Deploy Bicep'
+        environment: 'migration-ado-dev'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - checkout: self
+                - template: .pipelines/templates/bicep-deploy.yml
+                  parameters:
+                    azureServiceConnection: $(azureServiceConnection)
+                    resourceGroupName: $(resourceGroupName)
+                    location: $(location)
+                    templateFile: infra/main.bicep
+                    appName: $(appName)
+                    skuName: $(skuName)
+
+  - stage: DeployApplication
+    displayName: 'Deploy application'
+    dependsOn: DeployInfrastructure
+    jobs:
+      - deployment: DeployApplication
+        displayName: 'Deploy App Service package'
+        environment: 'migration-ado-dev'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - template: .pipelines/templates/appservice-deploy.yml
+                  parameters:
+                    azureServiceConnection: $(azureServiceConnection)
+                    appName: $(appName)
+                    artifactName: $(artifactName)

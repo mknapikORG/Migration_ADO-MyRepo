@@ -1,0 +1,17 @@
+parameters:
+  azureServiceConnection: ''
+  appName: ''
+  artifactName: drop
+
+steps:
+  - download: current
+    displayName: 'Download app artifact'
+    artifact: ${{ parameters.artifactName }}
+
+  - task: AzureWebApp@1
+    displayName: 'Deploy app to Azure App Service'
+    inputs:
+      azureSubscription: ${{ parameters.azureServiceConnection }}
+      appType: webAppLinux
+      appName: ${{ parameters.appName }}
+      package: '$(Pipeline.Workspace)/${{ parameters.artifactName }}/**/*.zip'
