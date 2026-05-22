@@ -7,6 +7,6 @@ public class HelloWorldMessageTests
     [Fact]
     public void Value_ReturnsExpectedGreeting()
     {
-        Assert.Equal("Hello World from Azure App Service!", HelloWorldMessage.Value);
+        Assert.Equal("Hello World from Azure App Service!2", HelloWorldMessage.Value);
     }
 }
