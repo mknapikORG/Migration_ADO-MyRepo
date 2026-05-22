@@ -1,3 +1,22 @@
+parameters:
+  - name: Apps
+    type: object
+    displayName: 'Apps, use [] for empty'
+    default:
+      - name: HelloWorld.Api
+        project: src/HelloWorld.Api/HelloWorld.Api.csproj
+        artifactName: hello-world-api
+        appServiceName: '$(appName)'
+
+  - name: Templates
+    type: object
+    displayName: 'Bicep templates, use [] for empty'
+    default:
+      - name: main
+        templateFile: infra/main.bicep
+        appName: '$(appName)'
+        skuName: '$(skuName)'
+
 trigger:
   branches:
     include:
@@ -16,7 +35,6 @@ variables:
   location: 'westeurope'
   appName: 'TODO-GLOBALLY-UNIQUE-APP-NAME'
   skuName: 'B1'
-  artifactName: 'drop'
 
 stages:
   - stage: Build
@@ -35,46 +53,61 @@ stages:
               testProjects: tests/**/*.csproj
               buildConfiguration: $(buildConfiguration)
 
-          - template: .pipelines/templates/dotnet-publish.yml
-            parameters:
-              project: src/HelloWorld.Api/HelloWorld.Api.csproj
-              buildConfiguration: $(buildConfiguration)
-              artifactName: $(artifactName)
+          - ${{ each app in parameters.Apps }}:
+              - template: .pipelines/templates/dotnet-publish.yml
+                parameters:
+                  project: ${{ app.project }}
+                  buildConfiguration: $(buildConfiguration)
+                  artifactName: ${{ app.artifactName }}
 
   - stage: DeployInfrastructure
     displayName: 'Deploy infrastructure'
     dependsOn: Build
     jobs:
-      - deployment: DeployInfrastructure
-        displayName: 'Deploy Bicep'
-        environment: 'migration-ado-dev'
-        strategy:
-          runOnce:
-            deploy:
-              steps:
-                - checkout: self
-                - template: .pipelines/templates/bicep-deploy.yml
-                  parameters:
-                    azureServiceConnection: $(azureServiceConnection)
-                    resourceGroupName: $(resourceGroupName)
-                    location: $(location)
-                    templateFile: infra/main.bicep
-                    appName: $(appName)
-                    skuName: $(skuName)
+      - ${{ if eq(length(parameters.Templates), 0) }}:
+          - job: NoInfrastructure
+            displayName: 'No Bicep templates selected'
+            steps:
+              - pwsh: Write-Host 'No Bicep templates selected.'
+
+      - ${{ each template in parameters.Templates }}:
+          - deployment: DeployInfrastructure_${{ template.name }}
+            displayName: 'Deploy Bicep ${{ template.name }}'
+            environment: 'migration-ado-dev'
+            strategy:
+              runOnce:
+                deploy:
+                  steps:
+                    - checkout: self
+                    - template: .pipelines/templates/bicep-deploy.yml
+                      parameters:
+                        azureServiceConnection: $(azureServiceConnection)
+                        resourceGroupName: $(resourceGroupName)
+                        location: $(location)
+                        templateFile: ${{ template.templateFile }}
+                        appName: ${{ template.appName }}
+                        skuName: ${{ template.skuName }}
 
   - stage: DeployApplication
     displayName: 'Deploy application'
     dependsOn: DeployInfrastructure
     jobs:
-      - deployment: DeployApplication
-        displayName: 'Deploy App Service package'
-        environment: 'migration-ado-dev'
-        strategy:
-          runOnce:
-            deploy:
-              steps:
-                - template: .pipelines/templates/appservice-deploy.yml
-                  parameters:
-                    azureServiceConnection: $(azureServiceConnection)
-                    appName: $(appName)
-                    artifactName: $(artifactName)
+      - ${{ if eq(length(parameters.Apps), 0) }}:
+          - job: NoApplication
+            displayName: 'No apps selected'
+            steps:
+              - pwsh: Write-Host 'No apps selected.'
+
+      - ${{ each app in parameters.Apps }}:
+          - deployment: DeployApplication_${{ replace(app.name, '.', '_') }}
+            displayName: 'Deploy ${{ app.name }}'
+            environment: 'migration-ado-dev'
+            strategy:
+              runOnce:
+                deploy:
+                  steps:
+                    - template: .pipelines/templates/appservice-deploy.yml
+                      parameters:
+                        azureServiceConnection: $(azureServiceConnection)
+                        appName: ${{ app.appServiceName }}
+                        artifactName: ${{ app.artifactName }}

@@ -29,3 +29,28 @@ Before running `azure-pipelines-cd.yml`, update these variables:
 - `resourceGroupName`, `location`, and `skuName` if you want different Azure settings.
 
 The CD pipeline creates the resource group if needed, builds the Bicep template, deploys the infrastructure, then deploys the published ZIP package to Azure App Service.
+
+## CD selection parameters
+
+`azure-pipelines-cd.yml` has runtime parameters for selecting apps and Bicep templates:
+
+```yaml
+parameters:
+  - name: Apps
+    type: object
+    default:
+      - name: HelloWorld.Api
+        project: src/HelloWorld.Api/HelloWorld.Api.csproj
+        artifactName: hello-world-api
+        appServiceName: '$(appName)'
+
+  - name: Templates
+    type: object
+    default:
+      - name: main
+        templateFile: infra/main.bicep
+        appName: '$(appName)'
+        skuName: '$(skuName)'
+```
+
+Use `[]` for either parameter when you want to skip app publishing/deployment or infrastructure deployment for a run.
