@@ -1,12 +1,42 @@
 parameters:
   testProjects: 'tests/**/*.csproj'
   buildConfiguration: Release
+  testResultsDirectory: '$(Agent.TempDirectory)/test-results'
+  publishResults: false
 
 steps:
+  - pwsh: New-Item -ItemType Directory -Force -Path '${{ parameters.testResultsDirectory }}' | Out-Null
+    displayName: 'Create test results directory'
+
   - task: DotNetCoreCLI@2
     displayName: 'Test'
     inputs:
       command: test
       projects: ${{ parameters.testProjects }}
-      arguments: '--configuration ${{ parameters.buildConfiguration }} --no-build --logger trx --collect "XPlat Code Coverage"'
-      publishTestResults: true
+      arguments: '--configuration ${{ parameters.buildConfiguration }} --no-build --results-directory ${{ parameters.testResultsDirectory }} --logger "trx;LogFilePrefix=test-results" --collect "XPlat Code Coverage"'
+      publishTestResults: false
+
+  - task: PublishTestResults@2
+    displayName: 'Publish test results'
+    condition: and(succeededOrFailed(), eq('${{ parameters.publishResults }}', 'true'))
+    inputs:
+      testResultsFormat: VSTest
+      testResultsFiles: '**/*.trx'
+      searchFolder: '${{ parameters.testResultsDirectory }}'
+      mergeTestResults: true
+      failTaskOnFailedTests: true
+      testRunTitle: '.NET tests'
+
+  - task: PublishCodeCoverageResults@2
+    displayName: 'Publish code coverage'
+    condition: and(succeededOrFailed(), eq('${{ parameters.publishResults }}', 'true'))
+    inputs:
+      summaryFileLocation: '${{ parameters.testResultsDirectory }}/**/coverage.cobertura.xml'
+
+  - task: PublishPipelineArtifact@1
+    displayName: 'Publish portable test result files'
+    condition: and(succeededOrFailed(), eq('${{ parameters.publishResults }}', 'true'))
+    inputs:
+      targetPath: '${{ parameters.testResultsDirectory }}'
+      artifact: test-results
+      publishLocation: pipeline
