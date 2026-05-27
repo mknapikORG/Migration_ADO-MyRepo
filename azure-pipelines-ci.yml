@@ -34,3 +34,4 @@ stages:
             parameters:
               testProjects: tests/**/*.csproj
               buildConfiguration: $(buildConfiguration)
+              publishResults: true

@@ -2,5 +2,5 @@ namespace HelloWorld.Api;
 
 public static class HelloWorldMessage
 {
-    public const string Value = "Hello World from Azure App Service from GitHub!";
+    public const string Value = "Hello World from Azure App Service from ...1";
 }
